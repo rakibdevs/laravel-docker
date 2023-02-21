@@ -31,7 +31,7 @@ This command will install all the necessary dependencies and create a new Larave
 $ docker compose exec app php artisan storage:link
 $ docker compose exec app chmod -R 777 storage bootstrap/cache
 ```
-7. Run the following command to migrate database `docker compose exec app php artisan migrate`. Before migration please update environment variable for database.
+7. Run the following command to migrate database `docker compose exec php php artisan migrate:refresh`. Before migration please update environment variable for database.
 ```DB_CONNECTION=mysql
 DB_HOST=mysql
 DB_PORT=3306
