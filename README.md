@@ -22,7 +22,7 @@ $ docker-compose up -d
 ```
 5. Run the following command to create a new Laravel project inside a src directory:
 ```bash
-$ docker compose exec app composer create-project --prefer-dist laravel/laravel .
+$ docker compose exec php composer create-project --prefer-dist laravel/laravel .
 ```
 This command will install all the necessary dependencies and create a new Laravel project inside the src directory.
 
