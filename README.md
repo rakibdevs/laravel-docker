@@ -16,6 +16,7 @@ A generic docker environment for Laravel with mySql and Nginx
 $ docker compose build
 ```
 This command will download all the necessary dependencies and build the Docker image according to the specifications in the Dockerfile.
+
 4. Once the build is complete, run the following command to start the Docker container: 
 ```bas
 $ docker-compose up -d
@@ -28,8 +29,8 @@ This command will install all the necessary dependencies and create a new Larave
 
 6. Run other esential commands -
 ```bash
-$ docker compose exec app php artisan storage:link
-$ docker compose exec app chmod -R 777 storage bootstrap/cache
+$ docker compose exec php php artisan storage:link
+$ docker compose exec php chmod -R 777 storage bootstrap/cache
 ```
 7. Run the following command to migrate database `docker compose exec php php artisan migrate:refresh`. Before migration please update environment variable for database.
 ```DB_CONNECTION=mysql
