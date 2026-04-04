@@ -1,64 +1,198 @@
 ﻿# Laravel Docker 🐳
 
-<p align="center">
-<img src="https://repository-images.githubusercontent.com/604504498/60f54e29-db30-401a-9d2f-d14864cd5be0">
-</p>
-A generic docker environment for Laravel with mySql and Nginx
+A generic Docker environment for **Laravel 12** local development — updated for the latest PHP, MySQL, Nginx, Node.js, and Redis.
 
+## Stack
 
-## Insstallation
+| Service | Image | Version |
+|---------|-------|---------|
+| PHP-FPM | `php:8.4-fpm` | PHP 8.4 |
+| Nginx   | `nginx:1.27-alpine` | 1.27 (Alpine) |
+| MySQL   | `mysql:8.4` | 8.4 |
+| Node.js | `node:22-alpine` | 22 LTS |
+| Redis   | `redis:7.4-alpine` | 7.4 |
+| Composer | `composer:2` | 2.x (bundled in PHP image) |
 
-1. Click [Use this template](https://github.com/rakibdevs/laravel-docker/generate)
-2. Clone the repository containing the `docker-compose.yml` file.
-3. Run the following command to build the Docker image:
+## Ports
+
+| Service | Host port | Container port |
+|---------|-----------|---------------|
+| Nginx   | **8999**  | 80  |
+| MySQL   | **3399**  | 3306|
+| Redis   | **6399**  | 6379|
+
+## Quick Start
+
+### 1. Clone / use this template
 
 ```bash
-$ docker compose build
+git clone https://github.com/rakibdevs/laravel-docker.git
+cd laravel-docker
 ```
-This command will download all the necessary dependencies and build the Docker image according to the specifications in the Dockerfile.
 
-4. Once the build is complete, run the following command to start the Docker container: 
-```bas
-$ docker-compose up -d
-```
-5. Run the following command to create a new Laravel project inside a src directory:
-```bash
-$ sudo chmod 777 src/
-$ docker compose exec php composer create-project --prefer-dist laravel/laravel .
-```
-This command will install all the necessary dependencies and create a new Laravel project inside the src directory.
+### 2. Copy the env file
 
-6. Run other esential commands -
 ```bash
-$ docker compose exec php php artisan storage:link
-$ docker compose exec php chmod -R 777 storage bootstrap/cache
+cp .env.example .env
 ```
-7. Run the following command to migrate database `docker compose exec php php artisan migrate:refresh`. Before migration please update environment variable for database.
-```DB_CONNECTION=mysql
+
+### 3. Build Docker images
+
+```bash
+docker compose build
+```
+
+### 4. Start containers
+
+```bash
+docker compose up -d
+```
+
+### 5. Create a new Laravel 12 project
+
+```bash
+# Give write permission to the empty src/ directory
+sudo chmod 777 src/
+
+# Create project inside the PHP container
+docker compose exec php composer create-project laravel/laravel .
+```
+
+### 6. Configure Laravel's `.env`
+
+Edit `src/.env` and update these values:
+
+```dotenv
+DB_CONNECTION=mysql
 DB_HOST=mysql
 DB_PORT=3306
 DB_DATABASE=laravel
-DB_USERNAME=root
+DB_USERNAME=laravel
 DB_PASSWORD=1234
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+QUEUE_CONNECTION=redis
 ```
 
-## Acces Webpage
-To access the web page for your Laravel project, please follow these steps:
-
-Ensure that the Docker container is running by running the command docker ps in your terminal or command prompt. This command will display a list of all the running Docker containers on your system.
-
-Open a web browser and navigate to the following URL: http://localhost:8999. This URL corresponds to the port that has been exposed in the `docker-compose.yml` file for the Nginx service.
-
-## How to setup different PHP version?
-To update the PHP version for your Docker container, please follow these steps:
-
-Open the `Dockerfile` for your PHP image, which is located in the `docker/php/` directory.
-
-Update the FROM statement to use the base image for the PHP version you want to use. For example, to use PHP version 7.4, you can change the FROM statement to the following:
+### 7. Run post-install artisan commands
 
 ```bash
-FROM php:7.4-fpm
+docker compose exec php php artisan key:generate
+docker compose exec php php artisan storage:link
+docker compose exec php chmod -R 777 storage bootstrap/cache
+docker compose exec php php artisan migrate
 ```
-Save the Dockerfile and build the Docker image again using the `docker-compose build` command.
 
-Once the build is complete, start the Docker container using the `docker-compose up` command.
+### 8. Build front-end assets (Vite)
+
+```bash
+# One-time production build
+docker compose run --rm node npm run build
+
+# Or watch mode during development
+docker compose run --rm node npm run dev
+```
+
+### 9. Open in browser
+
+👉 http://localhost:8999
+
+---
+
+## Common Commands
+
+```bash
+# Run Artisan commands
+docker compose exec php php artisan <command>
+
+# Run Composer commands
+docker compose exec php composer <command>
+
+# Run npm commands
+docker compose run --rm node npm <command>
+
+# Access MySQL CLI
+docker compose exec mysql mysql -u root -p
+
+# Access Redis CLI
+docker compose exec redis redis-cli
+
+# Tail logs
+docker compose logs -f
+
+# Stop all containers
+docker compose down
+
+# Stop and remove volumes (⚠️ deletes database)
+docker compose down -v
+```
+
+---
+
+## Changing PHP version
+
+Edit `docker/php/Dockerfile` and update the `FROM` line:
+
+```dockerfile
+# PHP 8.2 (minimum for Laravel 12)
+FROM php:8.2-fpm
+
+# PHP 8.3
+FROM php:8.3-fpm
+
+# PHP 8.4 (recommended)
+FROM php:8.4-fpm
+```
+
+Then rebuild:
+
+```bash
+docker compose build php
+docker compose up -d
+```
+
+---
+
+## Services Overview
+
+### PHP (`docker/php/Dockerfile`)
+Built from the official `php:8.4-fpm` image with all extensions required by Laravel 12:
+`bcmath`, `ctype`, `curl`, `dom`, `exif`, `fileinfo`, `gd`, `gmp`, `intl`, `mbstring`, `opcache`, `pcntl`, `pdo_mysql`, `pdo_pgsql`, `redis`, `tokenizer`, `xml`, `zip`, and Composer 2.
+
+### Nginx (`docker/nginx/nginx.conf`)
+Configured for Laravel's public directory, PHP-FPM pass-through, static asset caching, gzip, and dotfile protection.
+
+### MySQL (`mysql:8.4`)
+The deprecated `--default-authentication-plugin` flag has been removed (it was dropped in MySQL 8.4). Includes a healthcheck so PHP waits for the database to be ready before starting.
+
+### Node.js (`docker/node/Dockerfile`)
+Node 22 LTS on Alpine with Python/make/g++ for native module builds. Used for Vite asset compilation.
+
+### Redis (`redis:7.4-alpine`)
+Lightweight Redis instance for cache, session, and queue drivers.
+
+---
+
+## Project Structure
+
+```
+laravel-docker/
+├── docker/
+│   ├── nginx/
+│   │   └── nginx.conf        # Nginx server block
+│   ├── node/
+│   │   └── Dockerfile        # Node 22 LTS image
+│   ├── php/
+│   │   ├── Dockerfile        # PHP 8.4-FPM + extensions
+│   │   ├── php.ini           # Custom PHP config
+│   │   └── www.conf          # PHP-FPM pool config
+│   └── database/             # MySQL data (git-ignored)
+├── src/                      # Laravel application lives here
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+└── README.md
+```
